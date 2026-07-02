@@ -26,7 +26,7 @@ Expected before the first GitHub push:
 Run:
 
 ```bash
-git check-ignore -v .env.local .local-data/db.json .next tsconfig.tsbuildinfo public/exports/living-ai-ux-portfolio-pranav-likhi.pdf
+git check-ignore -v .env.local .local-data/db.json .next tsconfig.tsbuildinfo public/exports/living-ai-ux-portfolio-latest.pdf
 ```
 
 Expected result: each file should be ignored by `.gitignore`.
@@ -149,8 +149,9 @@ Before relying on the deployed app:
 1. Run `supabase/migrations/0001_initial.sql`.
 2. Run `supabase/migrations/0002_scoring_consistency_fields.sql`.
 3. Run `supabase/migrations/0003_launch_privacy_hardening.sql`.
-4. Confirm `study-screenshots` is private.
-5. Confirm `portfolio-exports` is public.
+4. Run `supabase/migrations/0004_pdf_and_recommendation_consistency.sql`.
+5. Confirm `study-screenshots` is private.
+6. Confirm `portfolio-exports` is public.
 
 See `PRODUCTION_SETUP.md` for details.
 

@@ -28,7 +28,8 @@ export const StudyAnalysisSchema = z.object({
   public_publish_recommendation: z.string(),
   analysis_status: z.enum([
     "OpenAI analyzed successfully",
-    "Manual/fallback extraction only",
+    "Manual analysis completed",
+    "Fallback/manual extraction only",
     "Re-analysis needed"
   ]),
   ai_confidence: z.number().min(0).max(100),

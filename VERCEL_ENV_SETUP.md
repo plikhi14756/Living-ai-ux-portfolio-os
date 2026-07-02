@@ -159,3 +159,11 @@ https://YOUR_DOMAIN/api/cron/monthly-review?secret=YOUR_CRON_SECRET
 ```
 
 Expected result: JSON with a design review and maintenance report, or a clear error if another production dependency is missing.
+
+Manual Living PDF regeneration after admin login:
+
+```text
+https://YOUR_DOMAIN/api/admin/regenerate-pdf
+```
+
+Expected result for an authenticated admin POST request: JSON with the latest PDF URL and included public-entry count.

@@ -119,7 +119,8 @@ export function EditStudyForm({ study }: { study: Study }) {
           <select name="analysis_status" className="field" defaultValue={study.analysis_status}>
             {[
               "OpenAI analyzed successfully",
-              "Manual/fallback extraction only",
+              "Manual analysis completed",
+              "Fallback/manual extraction only",
               "Re-analysis needed"
             ].map((item) => (
               <option key={item}>{item}</option>

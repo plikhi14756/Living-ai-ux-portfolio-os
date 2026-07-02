@@ -1,11 +1,9 @@
 import { PORTFOLIO_CATEGORIES } from "@/lib/constants";
 import { confidentialityGuard, normalizeUnknown } from "@/lib/ai/confidentiality";
 import {
-  LINKEDIN_NOT_RECOMMENDED,
   PUBLIC_NO_HIGHLIGHT_RECOMMENDATION,
   classifyStudy,
-  classificationForScore,
-  publishRecommendationForScore
+  normalizeStudyRecommendation
 } from "@/lib/ai/scoring";
 import { StudyAnalysisSchema, type StudyAnalysis } from "@/lib/ai/schemas";
 import { isProductionDeployment } from "@/lib/env";
@@ -120,6 +118,12 @@ function applyManualStudyFields(
   });
 }
 
+function statusForSourceType(input: AnalyzeStudyInput) {
+  return input.sourceType === "manual"
+    ? "Manual analysis completed"
+    : "OpenAI analyzed successfully";
+}
+
 function known(value: string) {
   const normalized = normalizeUnknown(value);
   return normalized !== "unknown" && normalized !== "ai analysis pending";
@@ -159,7 +163,7 @@ function extractionConfidenceFloor(analysis: StudyAnalysis) {
 }
 
 function finalizePortfolioScoring(analysis: StudyAnalysis) {
-  const scoring = classifyStudy({
+  const recommendation = normalizeStudyRecommendation({
     platform: analysis.platform,
     title: analysis.study_title,
     topic: analysis.visible_topic,
@@ -169,27 +173,17 @@ function finalizePortfolioScoring(analysis: StudyAnalysis) {
       analysis.safe_public_description
     ].join(" "),
     studyType: analysis.study_type,
-    duration: analysis.estimated_duration
+    duration: analysis.estimated_duration,
+    confidentialityRisk: analysis.confidentiality_risk,
+    portfolioClassification: analysis.portfolio_classification,
+    portfolioScore: analysis.portfolio_score,
+    recommendedSection: analysis.recommended_section,
+    safePublicTitle: analysis.safe_public_title,
+    safePublicDescription: analysis.safe_public_description,
+    publicPublishRecommendation: analysis.public_publish_recommendation,
+    linkedinFeaturedTitle: analysis.linkedin_featured_title,
+    linkedinFeaturedDescription: analysis.linkedin_featured_description
   });
-
-  const unsafe = analysis.confidentiality_risk === "high";
-  const score = scoring.genericUnrelatedSurvey
-    ? scoring.score
-    : Math.max(0, Math.min(100, Math.round(analysis.portfolio_score)));
-  const portfolio_score = unsafe ? 0 : score;
-  const portfolio_classification = scoring.genericUnrelatedSurvey
-    ? scoring.classification
-    : classificationForScore(portfolio_score, unsafe);
-  const recommended_section = scoring.genericUnrelatedSurvey
-    ? "Research Participation Log"
-    : scoring.recommended_section;
-  const public_publish_recommendation = publishRecommendationForScore(
-    portfolio_score,
-    portfolio_classification,
-    scoring.genericUnrelatedSurvey
-  );
-  const linkedinRecommended =
-    public_publish_recommendation !== PUBLIC_NO_HIGHLIGHT_RECOMMENDATION;
   const ai_confidence =
     analysis.analysis_status === "Re-analysis needed"
       ? 0
@@ -200,16 +194,12 @@ function finalizePortfolioScoring(analysis: StudyAnalysis) {
 
   return StudyAnalysisSchema.parse({
     ...analysis,
-    portfolio_score,
-    portfolio_classification,
-    recommended_section,
-    public_publish_recommendation,
-    linkedin_featured_title: linkedinRecommended
-      ? analysis.linkedin_featured_title
-      : LINKEDIN_NOT_RECOMMENDED,
-    linkedin_featured_description: linkedinRecommended
-      ? analysis.linkedin_featured_description
-      : "",
+    portfolio_score: recommendation.portfolio_score,
+    portfolio_classification: recommendation.portfolio_classification,
+    recommended_section: recommendation.recommended_section,
+    public_publish_recommendation: recommendation.public_publish_recommendation,
+    linkedin_featured_title: recommendation.linkedin_featured_title,
+    linkedin_featured_description: recommendation.linkedin_featured_description,
     ai_confidence
   });
 }
@@ -279,14 +269,15 @@ const studyAnalysisJsonSchema = {
     linkedin_featured_title: { type: "string" },
     linkedin_featured_description: { type: "string" },
     public_publish_recommendation: { type: "string" },
-    analysis_status: {
-      type: "string",
-      enum: [
-        "OpenAI analyzed successfully",
-        "Manual/fallback extraction only",
-        "Re-analysis needed"
-      ]
-    },
+	    analysis_status: {
+	      type: "string",
+	      enum: [
+	        "OpenAI analyzed successfully",
+	        "Manual analysis completed",
+	        "Fallback/manual extraction only",
+	        "Re-analysis needed"
+	      ]
+	    },
     ai_confidence: { type: "number", minimum: 0, maximum: 100 },
     missing_questions: {
       type: "array",
@@ -323,7 +314,7 @@ function getPrompt(input: AnalyzeStudyInput) {
     "If portfolio_score is 0, classify as Record only unless unsafe, then classify as Do not add.",
     "For generic surveys unrelated to AI UX, HCI, product testing, usability testing, AI evaluation, fintech UX, voice AI, conversational AI, or multilingual product evaluation, classify as Record only, score around 10, recommended_section Research Participation Log, public_publish_recommendation Do not publish as portfolio highlight, and do not recommend LinkedIn Featured.",
     "If platform, title, topic, duration, and reward are visible and extracted, ai_confidence should usually be above 70 even when portfolio_score is low.",
-    "Set analysis_status to OpenAI analyzed successfully when using the screenshot evidence.",
+    "Set analysis_status to OpenAI analyzed successfully when using screenshot evidence, or Manual analysis completed when analyzing a manual entry.",
     "Public text must protect confidentiality. Never reveal company names unless clearly public and safe, researcher names, study IDs, completion codes, private prototype details, unreleased product details, exact confidential tasks, or screenshots.",
     "Use wording like confidential fintech AI assistant evaluation instead of private names.",
     `Selected platform if supplied: ${input.selectedPlatform || "unknown"}.`,
@@ -504,7 +495,7 @@ function fallbackAnalysis(input: AnalyzeStudyInput): StudyAnalysis {
     linkedin_featured_title: title,
     linkedin_featured_description: safeDescription,
     public_publish_recommendation: scoring.public_publish_recommendation,
-    analysis_status: "Manual/fallback extraction only",
+    analysis_status: "Fallback/manual extraction only",
     ai_confidence: process.env.OPENAI_API_KEY ? 35 : 25,
     missing_questions: [
       ...(duration === "unknown" ? ["What was the approximate duration?"] : []),
@@ -590,7 +581,7 @@ export async function analyzeStudyEvidence(input: AnalyzeStudyInput) {
         applyManualStudyFields(
           {
             ...modelAnalysis,
-            analysis_status: "OpenAI analyzed successfully"
+            analysis_status: statusForSourceType(input)
           },
           input.manualFields
         )

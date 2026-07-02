@@ -11,7 +11,8 @@ export type ConfidentialityRisk = "low" | "medium" | "high" | "unknown";
 
 export type AnalysisStatus =
   | "OpenAI analyzed successfully"
-  | "Manual/fallback extraction only"
+  | "Manual analysis completed"
+  | "Fallback/manual extraction only"
   | "Re-analysis needed";
 
 export type Study = {

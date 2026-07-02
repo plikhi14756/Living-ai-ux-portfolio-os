@@ -54,6 +54,13 @@ export async function POST(
       read: false,
       related_study_id: study.id
     });
+    await createNotification({
+      title: "Living PDF portfolio updated.",
+      message: `The latest Living AI UX Portfolio PDF was regenerated with ${pdf.includedEntryCount} approved public entries.`,
+      type: "pdf_updated",
+      read: false,
+      related_study_id: study.id
+    });
 
     return NextResponse.json({ study, pdfUrl: pdf.publicUrl });
   } catch (error) {

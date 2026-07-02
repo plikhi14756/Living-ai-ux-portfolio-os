@@ -2,8 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   PDF_CONFIDENTIALITY_NOTE,
-  PDF_TITLE,
-  PORTFOLIO_CATEGORIES
+  PDF_TITLE
 } from "@/lib/constants";
 import { setSetting } from "@/lib/data/store";
 import { isProductionDeployment } from "@/lib/env";
@@ -19,6 +18,16 @@ const PAGE_HEIGHT = 792;
 const MARGIN = 54;
 const LINE_HEIGHT = 15;
 const MAX_LINES = 43;
+const LATEST_PDF_FILENAME = "living-ai-ux-portfolio-latest.pdf";
+const PDF_CATEGORIES = [
+  "Major AI UX Projects",
+  "AI Workflow Projects",
+  "AI Evaluation Experience",
+  "Fintech & Banking UX",
+  "Voice & Conversational AI",
+  "Multilingual Product Evaluation",
+  "Usability Testing & Product Feedback"
+];
 
 function escapePdfText(text: string) {
   return text
@@ -49,9 +58,14 @@ function wrap(text: string, width = 84) {
 }
 
 function makeLines(studies: Study[]) {
+  const updatedAt = new Date().toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric"
+  });
   const lines: Array<{ text: string; size?: number; gap?: boolean }> = [
     { text: PDF_TITLE, size: 20 },
-    { text: `Export date: ${new Date().toLocaleDateString("en-US")}` },
+    { text: `Last updated: ${updatedAt}` },
     { text: PDF_CONFIDENTIALITY_NOTE },
     { text: " " }
   ];
@@ -79,11 +93,16 @@ function makeLines(studies: Study[]) {
     lines.push({ text: " " });
   }
 
-  for (const category of PORTFOLIO_CATEGORIES) {
+  for (const category of PDF_CATEGORIES) {
     const items = approved.filter((study) => study.recommended_section === category);
-    if (!items.length) continue;
 
     lines.push({ text: category, size: 16, gap: true });
+    if (!items.length) {
+      lines.push({ text: "  No approved public entries in this section yet." });
+      lines.push({ text: " " });
+      continue;
+    }
+
     for (const study of items) {
       lines.push({
         text: `${study.safe_public_title} - ${study.portfolio_classification}`,
@@ -103,6 +122,12 @@ function makeLines(studies: Study[]) {
   }
 
   return lines;
+}
+
+function publicPortfolioStudies(studies: Study[]) {
+  return studies
+    .filter((study) => study.status === "approved" && isPublicPortfolioStudy(study))
+    .sort((a, b) => b.portfolio_score - a.portfolio_score);
 }
 
 function createPdfBuffer(studies: Study[]) {
@@ -189,19 +214,38 @@ function renderPage(lines: Array<{ text: string; size?: number; gap?: boolean }>
 }
 
 export async function generateAndStorePortfolioPdf(studies: Study[]) {
-  const pdf = createPdfBuffer(studies);
-  const filename = "living-ai-ux-portfolio-pranav-likhi.pdf";
+  const includedEntries = publicPortfolioStudies(studies);
+  console.info("[pdf] Regenerating living portfolio PDF", {
+    includedEntryCount: includedEntries.length
+  });
+
+  const pdf = createPdfBuffer(includedEntries);
+  const filename = LATEST_PDF_FILENAME;
   const supabase = getSupabaseAdmin();
   let publicUrl = `/exports/${filename}`;
+  const version = new Date().toISOString();
 
   if (supabase) {
     const { error } = await supabase.storage
       .from("portfolio-exports")
       .upload(filename, pdf, {
         contentType: "application/pdf",
+        cacheControl: "60",
         upsert: true
       });
-    if (error) throw error;
+    if (error) {
+      console.error("[pdf] Supabase PDF upload failed", {
+        bucket: "portfolio-exports",
+        path: filename,
+        error: error.message
+      });
+      throw error;
+    }
+    console.info("[pdf] Supabase PDF upload succeeded", {
+      bucket: "portfolio-exports",
+      path: filename,
+      bytes: pdf.length
+    });
 
     const { data } = supabase.storage
       .from("portfolio-exports")
@@ -219,11 +263,21 @@ export async function generateAndStorePortfolioPdf(studies: Study[]) {
     await writeFile(join(exportDir, filename), pdf);
   }
 
+  const versionedUrl = `${publicUrl}${publicUrl.includes("?") ? "&" : "?"}v=${encodeURIComponent(version)}`;
+
   await setSetting("pdf", {
     title: PDF_TITLE,
-    latestUrl: publicUrl,
-    lastGeneratedAt: new Date().toISOString()
+    latestUrl: versionedUrl,
+    latestStoragePath: filename,
+    latestVersion: version,
+    lastGeneratedAt: version
   });
 
-  return { publicUrl, buffer: pdf };
+  console.info("[pdf] Living portfolio PDF regenerated", {
+    includedEntryCount: includedEntries.length,
+    path: filename,
+    url: versionedUrl
+  });
+
+  return { publicUrl: versionedUrl, buffer: pdf, includedEntryCount: includedEntries.length };
 }

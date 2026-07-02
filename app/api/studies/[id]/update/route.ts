@@ -45,10 +45,12 @@ export async function PATCH(
     }
 
     let pdfUrl = "";
+    let includedEntryCount = 0;
     if (study.status === "approved") {
       const studies = await listStudies({ approvedOnly: true });
       const pdf = await generateAndStorePortfolioPdf(studies);
       pdfUrl = pdf.publicUrl;
+      includedEntryCount = pdf.includedEntryCount;
     }
 
     await createNotification({
@@ -58,6 +60,15 @@ export async function PATCH(
       read: false,
       related_study_id: study.id
     });
+    if (pdfUrl) {
+      await createNotification({
+        title: "Living PDF portfolio updated.",
+        message: `The latest Living AI UX Portfolio PDF was regenerated with ${includedEntryCount} approved public entries.`,
+        type: "pdf_updated",
+        read: false,
+        related_study_id: study.id
+      });
+    }
 
     return NextResponse.json({ study, pdfUrl });
   } catch (error) {

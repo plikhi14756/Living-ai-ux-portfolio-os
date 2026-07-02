@@ -1,4 +1,5 @@
 import type {
+  AnalysisStatus,
   DesignReview,
   MaintenanceReport,
   Notification,
@@ -8,10 +9,7 @@ import type {
   StudyUpdate
 } from "@/lib/types";
 import {
-  PUBLIC_NO_HIGHLIGHT_RECOMMENDATION,
-  classifyStudy,
-  classificationForScore,
-  publishRecommendationForScore
+  normalizeStudyRecommendation
 } from "@/lib/ai/scoring";
 import { isProductionDeployment } from "@/lib/env";
 import {
@@ -67,6 +65,13 @@ function sortNewest<T extends { created_at: string }>(items: T[]) {
   );
 }
 
+function normalizeAnalysisStatus(status: string | null | undefined): AnalysisStatus {
+  if (status === "Manual analysis completed") return status;
+  if (status === "OpenAI analyzed successfully") return status;
+  if (status === "Re-analysis needed") return status;
+  return "Fallback/manual extraction only";
+}
+
 function assertLocalFallbackAllowed() {
   if (isProductionDeployment()) {
     throw new Error(
@@ -93,29 +98,23 @@ function normalizeStudyRecord(study: Study): Study {
     ) && study.study_title.toLowerCase().includes("travel motivation")
       ? "international travel motivation"
       : study.visible_topic;
-  const scoring = classifyStudy({
+  const recommendation = normalizeStudyRecommendation({
     platform: study.platform,
     title: study.study_title,
     topic: visibleTopic,
     notes: [study.what_i_did, study.safe_public_title, study.safe_public_description].join(" "),
     studyType: study.study_type,
-    duration: study.estimated_duration
+    duration: study.estimated_duration,
+    confidentialityRisk: study.confidentiality_risk,
+    portfolioClassification: study.portfolio_classification,
+    portfolioScore: study.portfolio_score,
+    recommendedSection: study.recommended_section,
+    safePublicTitle: study.safe_public_title,
+    safePublicDescription: study.safe_public_description,
+    publicPublishRecommendation: study.public_publish_recommendation,
+    linkedinFeaturedTitle: study.linkedin_featured_title,
+    linkedinFeaturedDescription: study.linkedin_featured_description
   });
-  const score = scoring.genericUnrelatedSurvey
-    ? scoring.score
-    : Math.max(0, Math.min(100, Number(study.portfolio_score ?? 0)));
-  const unsafe = study.confidentiality_risk === "high";
-  const classification = scoring.genericUnrelatedSurvey
-    ? scoring.classification
-    : classificationForScore(score, unsafe);
-  const publicPublishRecommendation =
-    score < 30 ||
-    classification === "Record only" ||
-    classification === "Do not add" ||
-    scoring.genericUnrelatedSurvey
-      ? scoring.public_publish_recommendation
-      : study.public_publish_recommendation ||
-        publishRecommendationForScore(score, classification);
   const knownVisibleFields = [
     study.platform,
     study.study_title,
@@ -127,7 +126,7 @@ function normalizeStudyRecord(study: Study): Study {
     return normalized && normalized !== "unknown" && normalized !== "ai analysis pending";
   }).length;
   const inferredAnalysisStatus =
-    study.analysis_status ??
+    normalizeAnalysisStatus(study.analysis_status) ??
     (knownVisibleFields >= 3
       ? "OpenAI analyzed successfully"
       : "Re-analysis needed");
@@ -148,33 +147,36 @@ function normalizeStudyRecord(study: Study): Study {
   return {
     ...study,
     visible_topic: visibleTopic,
-    portfolio_classification: classification,
-    portfolio_score: score,
-    recommended_section: scoring.genericUnrelatedSurvey
-      ? "Research Participation Log"
-      : study.recommended_section,
-    public_publish_recommendation: publicPublishRecommendation,
-    analysis_status:
-      inferredAnalysisStatus,
+    portfolio_classification: recommendation.portfolio_classification,
+    portfolio_score: recommendation.portfolio_score,
+    recommended_section: recommendation.recommended_section,
+    public_publish_recommendation: recommendation.public_publish_recommendation,
+    analysis_status: inferredAnalysisStatus,
     ai_confidence: aiConfidence,
-    linkedin_featured_title:
-      publicPublishRecommendation === PUBLIC_NO_HIGHLIGHT_RECOMMENDATION
-        ? "LinkedIn Featured not recommended"
-        : study.linkedin_featured_title || "",
-    linkedin_featured_description:
-      publicPublishRecommendation === PUBLIC_NO_HIGHLIGHT_RECOMMENDATION
-        ? ""
-        : study.linkedin_featured_description || ""
+    linkedin_featured_title: recommendation.linkedin_featured_title,
+    linkedin_featured_description: recommendation.linkedin_featured_description
   };
 }
 
 function normalizeStudy(input: StudyInput): Study {
   const now = timestamp();
-  const score = input.portfolio_score ?? 0;
-  const classification = classificationForScore(
-    score,
-    input.confidentiality_risk === "high"
-  );
+  const recommendation = normalizeStudyRecommendation({
+    platform: input.platform,
+    title: input.study_title,
+    topic: input.visible_topic,
+    notes: [input.what_i_did, input.safe_public_title, input.safe_public_description].join(" "),
+    studyType: input.study_type,
+    duration: input.estimated_duration,
+    confidentialityRisk: input.confidentiality_risk,
+    portfolioClassification: input.portfolio_classification,
+    portfolioScore: input.portfolio_score,
+    recommendedSection: input.recommended_section,
+    safePublicTitle: input.safe_public_title,
+    safePublicDescription: input.safe_public_description,
+    publicPublishRecommendation: input.public_publish_recommendation,
+    linkedinFeaturedTitle: input.linkedin_featured_title,
+    linkedinFeaturedDescription: input.linkedin_featured_description
+  });
 
   return normalizeStudyRecord({
     id: input.id ?? crypto.randomUUID(),
@@ -187,20 +189,18 @@ function normalizeStudy(input: StudyInput): Study {
     approval_status: input.approval_status || "unknown",
     what_i_did: input.what_i_did || "unknown",
     confidentiality_risk: input.confidentiality_risk || "unknown",
-    portfolio_classification: input.portfolio_classification || classification,
-    recommended_section: input.recommended_section || "Research Participation Log",
-    portfolio_score: score,
+    portfolio_classification: recommendation.portfolio_classification,
+    recommended_section: recommendation.recommended_section,
+    portfolio_score: recommendation.portfolio_score,
     safe_public_title: input.safe_public_title || "Untitled research experience",
     safe_public_description:
       input.safe_public_description || "A safely summarized research experience.",
     case_study_summary: input.case_study_summary || "",
     skills_demonstrated: input.skills_demonstrated || [],
-    linkedin_featured_title: input.linkedin_featured_title || "",
-    linkedin_featured_description: input.linkedin_featured_description || "",
-    public_publish_recommendation:
-      input.public_publish_recommendation ||
-      publishRecommendationForScore(score, classification),
-    analysis_status: input.analysis_status || "Manual/fallback extraction only",
+    linkedin_featured_title: recommendation.linkedin_featured_title,
+    linkedin_featured_description: recommendation.linkedin_featured_description,
+    public_publish_recommendation: recommendation.public_publish_recommendation,
+    analysis_status: normalizeAnalysisStatus(input.analysis_status),
     source_type: input.source_type,
     status: input.status || "pending",
     screenshot_urls: input.screenshot_urls || [],

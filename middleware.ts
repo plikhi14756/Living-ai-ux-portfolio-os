@@ -4,6 +4,7 @@ import { isProductionDeployment } from "@/lib/env";
 const ADMIN_COOKIE = "living_ai_admin";
 
 const protectedApiPrefixes = [
+  "/api/admin",
   "/api/analyze-study",
   "/api/manual-experience",
   "/api/studies",

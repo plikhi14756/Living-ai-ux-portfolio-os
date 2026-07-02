@@ -16,7 +16,9 @@ export async function GET(request: NextRequest) {
       latestUrl = pdf.publicUrl;
     }
 
-    return NextResponse.redirect(new URL(latestUrl, request.url));
+    const response = NextResponse.redirect(new URL(latestUrl, request.url));
+    response.headers.set("Cache-Control", "no-store");
+    return response;
   } catch (error) {
     return apiError(error);
   }

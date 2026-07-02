@@ -18,7 +18,7 @@ function study(
       input.portfolio_score >= 80
         ? "Publish as portfolio highlight"
         : "Publish as portfolio entry",
-    analysis_status: "Manual/fallback extraction only",
+    analysis_status: "Fallback/manual extraction only",
     created_at: BASE_DATE,
     updated_at: BASE_DATE,
     published_at: BASE_DATE

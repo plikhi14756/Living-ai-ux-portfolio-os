@@ -29,16 +29,20 @@ export default async function DocumentsPage() {
       <section className="container-page grid gap-4 pb-12 md:grid-cols-2">
         <DocumentCard
           icon={<FileText size={22} />}
-          title="Static polished portfolio PDF"
+          title="Static AI UX Research Portfolio PDF"
           body="A curated export for applications, recruiter conversations, and LinkedIn Featured."
           action={<Link className="btn-primary" href={ORIGINAL_PORTFOLIO_PDF_URL}>Open static PDF</Link>}
           meta="Imported from the original portfolio file"
         />
         <DocumentCard
           icon={<Sparkles size={22} />}
-          title="Living PDF export"
+          title="Latest Living AI UX Portfolio PDF"
           body="Automatically rebuilt after approved portfolio entries are published."
-          action={<Link className="btn-secondary" href="/api/pdf/latest">Living export</Link>}
+          action={
+            <Link className="btn-secondary" href={pdf?.latestUrl || "/api/pdf/latest"}>
+              Open latest living PDF
+            </Link>
+          }
           meta={
             pdf?.lastGeneratedAt
               ? `Last generated ${new Date(pdf.lastGeneratedAt).toLocaleString("en-US")}`

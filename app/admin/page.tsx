@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Activity, FileCheck2, FileClock, FileX2, Gauge } from "lucide-react";
+import { RegeneratePdfButton } from "@/components/admin/regenerate-pdf-button";
 import { StudyCard } from "@/components/study-card";
 import {
   listDesignReviews,
@@ -93,6 +94,7 @@ export default async function AdminDashboardPage() {
             }
             href="/admin/design-review"
           />
+          <RegeneratePdfButton />
           <div className="card">
             <p className="eyebrow">Recent AI Suggestions</p>
             <div className="mt-4 space-y-3">
