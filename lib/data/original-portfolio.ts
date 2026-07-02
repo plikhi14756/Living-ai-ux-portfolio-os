@@ -30,6 +30,47 @@ export const ORIGINAL_PORTFOLIO_PDF_URL =
 
 export const ORIGINAL_PORTFOLIO_STUDIES: Study[] = [
   study({
+    id: "original-living-ai-ux-portfolio-os",
+    platform: "Personal AI workflow project",
+    study_title: "Living AI UX Portfolio OS",
+    visible_topic: "AI workflow automation for portfolio publishing",
+    estimated_duration: "ongoing",
+    reward: "portfolio project",
+    study_type: "AI workflow and portfolio system",
+    approval_status: "completed and approved",
+    what_i_did:
+      "Designed and built a private AI workflow app plus public portfolio website for turning screenshots, notes, and approved research evidence into public-safe portfolio entries.",
+    confidentiality_risk: "low",
+    portfolio_classification: "Major portfolio project",
+    recommended_section: "AI Workflow Projects",
+    portfolio_score: 92,
+    safe_public_title: "Living AI UX Portfolio OS",
+    safe_public_description:
+      "Built a living AI UX portfolio system that analyzes research-study evidence, classifies portfolio value, protects confidential details, supports human approval, publishes approved entries, and regenerates a branded living PDF.",
+    case_study_summary:
+      "A human-in-the-loop AI workflow project combining protected source intake, OpenAI-assisted analysis, portfolio scoring, confidentiality safeguards, public website publishing, PDF export, Supabase storage, and Vercel-ready deployment.",
+    skills_demonstrated: [
+      "AI workflow design",
+      "Human-in-the-loop approval",
+      "Portfolio automation",
+      "Confidentiality guardrails",
+      "Next.js App Router",
+      "TypeScript",
+      "Supabase",
+      "OpenAI vision analysis",
+      "PDF generation",
+      "Vercel deployment"
+    ],
+    linkedin_featured_title: "Living AI UX Portfolio OS",
+    linkedin_featured_description:
+      "A private AI workflow app and public portfolio website that turns approved AI/UX research evidence into safe portfolio entries and a branded living PDF.",
+    source_type: "manual",
+    status: "approved",
+    screenshot_urls: [],
+    ai_confidence: 100,
+    missing_questions: []
+  }),
+  study({
     id: "original-human-ai-conversation-psychology",
     platform: "University research study",
     study_title: "Human-AI Conversation Psychology Study",

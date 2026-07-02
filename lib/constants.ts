@@ -55,7 +55,7 @@ export const LINKEDIN_FEATURED_ITEMS = [
       "A continuously updated portfolio of my AI evaluation, UX research participation, fintech UX, voice AI, conversational AI, and multilingual product feedback experience."
   },
   {
-    title: "Static AI UX Research Portfolio PDF",
+    title: "Original Static Portfolio PDF",
     description:
       "A polished PDF portfolio summarizing selected AI UX, product research, and human-AI interaction experiences."
   }

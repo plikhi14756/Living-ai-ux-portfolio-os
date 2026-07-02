@@ -150,8 +150,9 @@ Before relying on the deployed app:
 2. Run `supabase/migrations/0002_scoring_consistency_fields.sql`.
 3. Run `supabase/migrations/0003_launch_privacy_hardening.sql`.
 4. Run `supabase/migrations/0004_pdf_and_recommendation_consistency.sql`.
-5. Confirm `study-screenshots` is private.
-6. Confirm `portfolio-exports` is public.
+5. Run `supabase/migrations/0005_branded_pdf_style_settings.sql`.
+6. Confirm `study-screenshots` is private.
+7. Confirm `portfolio-exports` is public.
 
 See `PRODUCTION_SETUP.md` for details.
 

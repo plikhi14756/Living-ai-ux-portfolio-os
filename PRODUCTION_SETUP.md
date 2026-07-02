@@ -19,6 +19,7 @@ Run the migration files exactly in this order:
 2. `supabase/migrations/0002_scoring_consistency_fields.sql`
 3. `supabase/migrations/0003_launch_privacy_hardening.sql`
 4. `supabase/migrations/0004_pdf_and_recommendation_consistency.sql`
+5. `supabase/migrations/0005_branded_pdf_style_settings.sql`
 
 ### Option A: Supabase SQL Editor
 
@@ -30,6 +31,7 @@ Run the migration files exactly in this order:
 6. Repeat for `0002_scoring_consistency_fields.sql`.
 7. Repeat for `0003_launch_privacy_hardening.sql`.
 8. Repeat for `0004_pdf_and_recommendation_consistency.sql`.
+9. Repeat for `0005_branded_pdf_style_settings.sql`.
 
 ### Option B: Supabase CLI
 

@@ -50,7 +50,7 @@ ADMIN_ACCESS_TOKEN=
 ## Supabase Setup
 
 1. Create a Supabase project.
-2. Run `supabase/migrations/0001_initial.sql`, `supabase/migrations/0002_scoring_consistency_fields.sql`, `supabase/migrations/0003_launch_privacy_hardening.sql`, and `supabase/migrations/0004_pdf_and_recommendation_consistency.sql` in the SQL editor or through the Supabase CLI.
+2. Run `supabase/migrations/0001_initial.sql`, `supabase/migrations/0002_scoring_consistency_fields.sql`, `supabase/migrations/0003_launch_privacy_hardening.sql`, `supabase/migrations/0004_pdf_and_recommendation_consistency.sql`, and `supabase/migrations/0005_branded_pdf_style_settings.sql` in the SQL editor or through the Supabase CLI.
 3. Add the Supabase URL, anon key, and service-role key to `.env.local`.
 4. Keep `study-screenshots` private. Screenshots are only served through the server-side admin proxy route.
 5. Keep `portfolio-exports` public so the latest PDF can be shared.
@@ -144,7 +144,7 @@ Public pages never show screenshots, study IDs, completion codes, researcher nam
 - `/admin/design-review`
 - `/admin/settings`
 
-## PDF Export
+## Branded Living PDF Export
 
 Generate from the admin workflow by approving a study, or call:
 
@@ -153,6 +153,14 @@ curl -X POST http://localhost:3000/api/admin/regenerate-pdf
 ```
 
 The admin dashboard also includes a **Regenerate Living PDF** button.
+
+The generated living PDF uses the branded portfolio template mode:
+
+```json
+{
+  "PDF_STYLE_MODE": "branded"
+}
+```
 
 The latest PDF is available at:
 
@@ -239,7 +247,7 @@ npm run build
 ## Launch Checklist
 
 - Set all production environment variables in Vercel, including `ADMIN_ACCESS_TOKEN`.
-- Run Supabase migrations `0001_initial.sql`, `0002_scoring_consistency_fields.sql`, `0003_launch_privacy_hardening.sql`, and `0004_pdf_and_recommendation_consistency.sql`.
+- Run Supabase migrations `0001_initial.sql`, `0002_scoring_consistency_fields.sql`, `0003_launch_privacy_hardening.sql`, `0004_pdf_and_recommendation_consistency.sql`, and `0005_branded_pdf_style_settings.sql`.
 - Confirm Supabase `study-screenshots` is private and `portfolio-exports` is public.
 - Confirm `/admin` redirects to `/admin-login` for logged-out visitors.
 - Confirm `/api/storage/screenshot/...` and `/uploads/studies/...` require admin access.

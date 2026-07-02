@@ -35,6 +35,7 @@ Confirm these migrations ran in order:
 - `0002_scoring_consistency_fields.sql`
 - `0003_launch_privacy_hardening.sql`
 - `0004_pdf_and_recommendation_consistency.sql`
+- `0005_branded_pdf_style_settings.sql`
 
 Confirm storage buckets:
 
@@ -108,7 +109,8 @@ High-score test:
 - Approve it.
 - Expected result: it appears on `/portfolio`.
 - Expected result: the living PDF export refreshes.
-- Expected result: `/documents` links to the latest versioned Living PDF.
+- Expected result: `/documents` shows the original static PDF and the branded living PDF separately.
+- Expected result: `/documents` links to the latest versioned branded Living PDF.
 
 ## AI And Cron
 

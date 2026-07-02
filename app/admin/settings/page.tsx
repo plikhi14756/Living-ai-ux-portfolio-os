@@ -71,6 +71,8 @@ export default async function AdminSettingsPage() {
         pdfSettings={
           pdfSettings ?? {
             title: "Living AI UX Portfolio — Pranav Likhi",
+            PDF_STYLE_MODE: "branded",
+            template: "branded-living-portfolio",
             includeExportDate: true,
             includeConfidentialityNote: true
           }

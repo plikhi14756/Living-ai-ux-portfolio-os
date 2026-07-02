@@ -29,18 +29,18 @@ export default async function DocumentsPage() {
       <section className="container-page grid gap-4 pb-12 md:grid-cols-2">
         <DocumentCard
           icon={<FileText size={22} />}
-          title="Static AI UX Research Portfolio PDF"
-          body="A curated export for applications, recruiter conversations, and LinkedIn Featured."
-          action={<Link className="btn-primary" href={ORIGINAL_PORTFOLIO_PDF_URL}>Open static PDF</Link>}
-          meta="Imported from the original portfolio file"
+          title="Original Static Portfolio PDF"
+          body="Original curated portfolio document."
+          action={<Link className="btn-primary" href={ORIGINAL_PORTFOLIO_PDF_URL}>Open original static PDF</Link>}
+          meta="Kept separate from the generated living PDF"
         />
         <DocumentCard
           icon={<Sparkles size={22} />}
-          title="Latest Living AI UX Portfolio PDF"
-          body="Automatically rebuilt after approved portfolio entries are published."
+          title="Branded Living AI UX Portfolio PDF"
+          body="Automatically updated portfolio version generated from approved AI/UX experiences."
           action={
             <Link className="btn-secondary" href={pdf?.latestUrl || "/api/pdf/latest"}>
-              Open latest living PDF
+              Open branded living PDF
             </Link>
           }
           meta={

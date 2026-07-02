@@ -136,6 +136,16 @@ function seedDb(): LocalDb {
       },
       {
         id: id(),
+        key: "pdf_style_settings",
+        value: {
+          PDF_STYLE_MODE: "branded",
+          template: "branded-living-portfolio",
+          latestFilename: "living-ai-ux-portfolio-latest.pdf"
+        },
+        updated_at: timestamp
+      },
+      {
+        id: id(),
         key: "privacy_rules",
         value: {
           neverReveal: [
@@ -184,19 +194,28 @@ function mergeOriginalPortfolioStudies(db: LocalDb) {
   const cleanedStudies = db.studies.filter(
     (study) => !legacyLocalSeedIds.has(study.id)
   );
-  const existingIds = new Set(cleanedStudies.map((study) => study.id));
-  const missing = ORIGINAL_PORTFOLIO_STUDIES.filter(
-    (study) => !existingIds.has(study.id)
+  const originalStudyIds = new Set(
+    ORIGINAL_PORTFOLIO_STUDIES.map((study) => study.id)
   );
+  const userStudies = cleanedStudies.filter(
+    (study) => !originalStudyIds.has(study.id)
+  );
+  const mergedStudies = [...ORIGINAL_PORTFOLIO_STUDIES, ...userStudies];
+  const changed =
+    cleanedStudies.length !== mergedStudies.length ||
+    cleanedStudies.some(
+      (study, index) =>
+        JSON.stringify(study) !== JSON.stringify(mergedStudies[index])
+    );
 
-  if (!missing.length && cleanedStudies.length === db.studies.length) {
+  if (!changed && cleanedStudies.length === db.studies.length) {
     return { db, changed: false };
   }
 
   return {
     db: {
       ...db,
-      studies: [...missing, ...cleanedStudies]
+      studies: mergedStudies
     },
     changed: true
   };
