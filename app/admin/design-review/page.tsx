@@ -1,4 +1,5 @@
 import {
+  CopyCodexImplementationPromptButton,
   DesignReviewDecision,
   RunDesignReviewButton,
   RunMaintenanceButton
@@ -52,6 +53,7 @@ export default async function DesignReviewPage() {
               </div>
               <JsonBlock title="Recommendations" value={review.recommendations} />
               <JsonBlock title="Preview design changes" value={review.preview_changes} />
+              <CopyCodexImplementationPromptButton review={review} />
               {review.status === "pending" ? (
                 <div className="mt-5">
                   <DesignReviewDecision id={review.id} />
