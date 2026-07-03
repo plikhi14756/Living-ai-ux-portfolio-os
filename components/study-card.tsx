@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LIVING_AI_UX_PORTFOLIO_OS_CASE_STUDY_PATH } from "@/lib/case-studies";
 import type { PublicStudy } from "@/lib/public-study";
 import type { Study } from "@/lib/types";
 
@@ -7,13 +8,10 @@ type StudyCardProps = {
   admin?: boolean;
 };
 
-const LIVING_AI_UX_PORTFOLIO_OS_CASE_STUDY =
-  "/projects/living-ai-ux-portfolio-os";
-
 export function StudyCard({ study, admin = false }: StudyCardProps) {
   const caseStudyHref =
     !admin && study.safe_public_title === "Living AI UX Portfolio OS"
-      ? LIVING_AI_UX_PORTFOLIO_OS_CASE_STUDY
+      ? LIVING_AI_UX_PORTFOLIO_OS_CASE_STUDY_PATH
       : null;
 
   return (

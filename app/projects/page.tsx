@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PublicShell } from "@/components/public/public-shell";
 import { StudyCard } from "@/components/study-card";
+import { LIVING_AI_UX_PORTFOLIO_OS_CASE_STUDY_PATH } from "@/lib/case-studies";
 import { listPublicStudies } from "@/lib/data/store";
 
 export const dynamic = "force-dynamic";
@@ -47,7 +48,7 @@ export default async function ProjectsPage() {
           <div className="flex flex-wrap items-end gap-3 lg:justify-end">
             <Link
               className="btn-primary"
-              href="/projects/living-ai-ux-portfolio-os"
+              href={LIVING_AI_UX_PORTFOLIO_OS_CASE_STUDY_PATH}
             >
               Read case study
             </Link>
@@ -69,7 +70,7 @@ export default async function ProjectsPage() {
                 </p>
                 <Link
                   className="btn-primary"
-                  href="/projects/living-ai-ux-portfolio-os"
+                  href={LIVING_AI_UX_PORTFOLIO_OS_CASE_STUDY_PATH}
                 >
                   Read case study
                 </Link>
