@@ -51,7 +51,7 @@ export default async function ProjectsPage() {
             >
               Read case study
             </Link>
-            <Link className="btn-secondary" href="/api/pdf/latest">
+            <Link className="btn-secondary" href="/documents">
               Open branded living PDF
             </Link>
           </div>

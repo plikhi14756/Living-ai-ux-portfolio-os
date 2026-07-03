@@ -7,14 +7,28 @@ type StudyCardProps = {
   admin?: boolean;
 };
 
+const LIVING_AI_UX_PORTFOLIO_OS_CASE_STUDY =
+  "/projects/living-ai-ux-portfolio-os";
+
 export function StudyCard({ study, admin = false }: StudyCardProps) {
+  const caseStudyHref =
+    !admin && study.safe_public_title === "Living AI UX Portfolio OS"
+      ? LIVING_AI_UX_PORTFOLIO_OS_CASE_STUDY
+      : null;
+
   return (
     <article className="card flex h-full flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="eyebrow">{study.recommended_section}</p>
           <h3 className="mt-2 text-xl font-bold text-ink dark:text-paper">
-            {study.safe_public_title}
+            {caseStudyHref ? (
+              <Link className="transition hover:text-moss dark:hover:text-cyan" href={caseStudyHref}>
+                {study.safe_public_title}
+              </Link>
+            ) : (
+              study.safe_public_title
+            )}
           </h3>
         </div>
         <span className="tag">{study.portfolio_score}/100</span>
@@ -39,6 +53,14 @@ export function StudyCard({ study, admin = false }: StudyCardProps) {
         <span>/</span>
         <span>{study.estimated_duration}</span>
       </div>
+
+      {caseStudyHref ? (
+        <div className="flex flex-wrap gap-2 border-t border-ink/10 pt-4 dark:border-white/10">
+          <Link className="btn-primary" href={caseStudyHref}>
+            Read case study
+          </Link>
+        </div>
+      ) : null}
 
       {admin ? (
         <div className="flex flex-wrap gap-2 border-t border-ink/10 pt-4 dark:border-white/10">
