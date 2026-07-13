@@ -2,8 +2,8 @@
   "buildCommand": "npm run build",
   "crons": [
     {
-      "path": "/api/cron/monthly-review",
-      "schedule": "0 14 1 * *"
+      "path": "/api/cron/portfolio-operations",
+      "schedule": "0 * * * *"
     }
   ]
 }

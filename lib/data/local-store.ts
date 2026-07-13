@@ -12,9 +12,17 @@ import {
   ORIGINAL_PORTFOLIO_STUDIES
 } from "@/lib/data/original-portfolio";
 import type {
+  DuplicateAuditLog,
   DesignReview,
+  MaintenanceIssue,
+  MaintenanceRun,
   MaintenanceReport,
   Notification,
+  NotificationDelivery,
+  NotificationPreferences,
+  OperationsAuditLog,
+  Release,
+  ReleaseView,
   SiteSetting,
   Study
 } from "@/lib/types";
@@ -25,6 +33,14 @@ type LocalDb = {
   maintenance_reports: MaintenanceReport[];
   notifications: Notification[];
   site_settings: SiteSetting[];
+  duplicate_audit_log: DuplicateAuditLog[];
+  maintenance_runs: MaintenanceRun[];
+  maintenance_issues: MaintenanceIssue[];
+  notification_preferences: NotificationPreferences[];
+  notification_deliveries: NotificationDelivery[];
+  releases: Release[];
+  release_views: ReleaseView[];
+  operations_audit_log: OperationsAuditLog[];
 };
 
 const DB_DIR = join(process.cwd(), ".local-data");
@@ -159,7 +175,33 @@ function seedDb(): LocalDb {
         },
         updated_at: timestamp
       }
-    ]
+    ],
+    duplicate_audit_log: [],
+    maintenance_runs: [],
+    maintenance_issues: [],
+    notification_preferences: [
+      {
+        id: id(),
+        owner_key: "primary-owner",
+        notification_email: null,
+        timezone: "America/Halifax",
+        weekly_maintenance_enabled: true,
+        monthly_design_review_enabled: true,
+        critical_alerts_enabled: true,
+        weekly_day_of_week: 1,
+        monthly_day_of_month: 1,
+        preferred_local_hour: 10,
+        last_weekly_email_at: null,
+        last_monthly_email_at: null,
+        last_critical_email_at: null,
+        created_at: timestamp,
+        updated_at: timestamp
+      }
+    ],
+    notification_deliveries: [],
+    releases: [],
+    release_views: [],
+    operations_audit_log: []
   };
 }
 
@@ -185,6 +227,15 @@ export async function writeLocalDb(db: LocalDb) {
 }
 
 function mergeOriginalPortfolioStudies(db: LocalDb) {
+  db.duplicate_audit_log ??= [];
+  db.maintenance_runs ??= [];
+  db.maintenance_issues ??= [];
+  db.notification_preferences ??= [];
+  db.notification_deliveries ??= [];
+  db.releases ??= [];
+  db.release_views ??= [];
+  db.operations_audit_log ??= [];
+
   const legacyLocalSeedIds = new Set([
     "seed-ai-assistant",
     "seed-fintech-prototype",

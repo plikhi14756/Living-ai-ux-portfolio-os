@@ -8,10 +8,12 @@ Run:
 
 ```bash
 npm run typecheck
+npm run lint
+npm test
 npm run build
 ```
 
-Expected result: both commands pass.
+Expected result: available commands pass. If the repo has no `test` script, record that no test command exists.
 
 ## Production Environment
 
@@ -24,6 +26,9 @@ Confirm these are set in Vercel Project Settings > Environment Variables:
 - `NEXT_PUBLIC_SITE_URL`
 - `CRON_SECRET`
 - `ADMIN_ACCESS_TOKEN`
+- `RESEND_API_KEY`
+- `ADMIN_NOTIFICATION_EMAIL`
+- `EMAIL_FROM`
 
 No real values should appear in code, commits, screenshots, or docs.
 
@@ -36,6 +41,7 @@ Confirm these migrations ran in order:
 - `0003_launch_privacy_hardening.sql`
 - `0004_pdf_and_recommendation_consistency.sql`
 - `0005_branded_pdf_style_settings.sql`
+- `0006_portfolio_operations_system.sql`
 
 Confirm storage buckets:
 
@@ -123,6 +129,22 @@ OpenAI:
 
 Cron:
 
-- Visit `/api/cron/monthly-review?secret=YOUR_CRON_SECRET`.
-- Expected result: monthly design review and maintenance report are created.
-- Without the secret in production, expected result: `401`.
+- Send `GET /api/cron/portfolio-operations` with `Authorization: Bearer YOUR_CRON_SECRET`.
+- Expected result: safe JSON with dispatcher status and counts.
+- Without the Bearer token in production, expected result: `401`.
+- Query-parameter cron secrets should not be accepted by the portfolio operations dispatcher.
+
+## Portfolio Operations
+
+- Visit `/admin/operations`.
+- Expected result: duplicate, maintenance, notification, release, and audit summaries appear.
+- Run **Run Full Health Check**.
+- Expected result: a maintenance run and issue history are saved.
+- Visit `/admin/operations/maintenance`.
+- Expected result: issues can be acknowledged, resolved, ignored, and their Codex repair prompts can be copied.
+- Visit `/admin/operations/duplicates`.
+- Expected result: duplicate audit records can be reviewed and resolved.
+- Visit `/admin/operations/releases`.
+- Expected result: the current release appears and can be marked read/unread.
+- Confirm notification preferences can save `America/Halifax` and `Asia/Kolkata`.
+- Send a test email after configuring `RESEND_API_KEY`, `EMAIL_FROM`, and a recipient.

@@ -1,12 +1,16 @@
 import Link from "next/link";
-import { Activity, FileCheck2, FileClock, FileX2, Gauge } from "lucide-react";
+import { Activity, Bell, FileCheck2, FileClock, FileX2, Gauge, GitCompareArrows, Sparkles } from "lucide-react";
+import { ReleaseActionButton, RunHealthCheckButton } from "@/components/admin/operations-actions";
 import { RegeneratePdfButton } from "@/components/admin/regenerate-pdf-button";
 import { StudyCard } from "@/components/study-card";
 import {
+  listAllOperationsData,
   listDesignReviews,
   listMaintenanceReports,
   listStudies
 } from "@/lib/data/store";
+import { resolveNotificationRecipient } from "@/lib/portfolio-operations/email/resolve-recipient";
+import { getReleaseState } from "@/lib/portfolio-operations/releases";
 
 export const dynamic = "force-dynamic";
 
@@ -15,10 +19,13 @@ export const metadata = {
 };
 
 export default async function AdminDashboardPage() {
-  const [studies, designReviews, maintenanceReports] = await Promise.all([
+  const [studies, designReviews, maintenanceReports, operations, recipient, releaseState] = await Promise.all([
     listStudies(),
     listDesignReviews(),
-    listMaintenanceReports()
+    listMaintenanceReports(),
+    listAllOperationsData(),
+    resolveNotificationRecipient(),
+    getReleaseState()
   ]);
 
   const pending = studies.filter((study) => study.status === "pending");
@@ -26,6 +33,15 @@ export default async function AdminDashboardPage() {
   const rejected = studies.filter((study) => study.status === "rejected");
   const latestDesign = designReviews[0];
   const latestMaintenance = maintenanceReports[0];
+  const unresolvedDuplicates = operations.duplicateLogs.filter(
+    (log) => log.resolution === "pending"
+  );
+  const openIssues = operations.maintenanceIssues.filter((issue) =>
+    ["open", "acknowledged"].includes(issue.status)
+  );
+  const criticalIssues = openIssues.filter((issue) => issue.severity === "critical").length;
+  const latestDelivery = operations.notificationDeliveries[0];
+  const unreadRelease = releaseState.unread[0];
 
   return (
     <div className="space-y-8">
@@ -43,6 +59,64 @@ export default async function AdminDashboardPage() {
           label="High-score entries"
           value={approved.filter((study) => study.portfolio_score >= 75).length}
         />
+      </section>
+
+      {unreadRelease ? (
+        <section className="card border-moss/30 bg-moss/5 dark:border-cyan/30 dark:bg-cyan/10">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="eyebrow">What&apos;s New</p>
+              <h2 className="mt-2 text-2xl font-black">
+                v{unreadRelease.version} · {unreadRelease.title}
+              </h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-ink/70 dark:text-paper/70">
+                {unreadRelease.summary}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <ReleaseActionButton action="view" releaseId={unreadRelease.id} />
+              <Link className="btn-secondary" href="/admin/operations/releases">
+                View All Updates
+              </Link>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      <section className="card">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="eyebrow">Portfolio Operations</p>
+            <h2 className="mt-2 text-2xl font-black">Health, duplicates, notifications, releases</h2>
+          </div>
+          <RunHealthCheckButton />
+        </div>
+        <div className="mt-5 grid gap-4 md:grid-cols-4">
+          <MiniPanel
+            title="Duplicate Protection"
+            icon={<GitCompareArrows size={20} />}
+            body={`${unresolvedDuplicates.length} unresolved duplicate alert(s)`}
+            href="/admin/operations/duplicates"
+          />
+          <MiniPanel
+            title="System Health"
+            icon={<Gauge size={20} />}
+            body={`${criticalIssues ? "Critical" : openIssues.length ? "Attention" : "Healthy"} · ${openIssues.length} open issue(s)`}
+            href="/admin/operations/maintenance"
+          />
+          <MiniPanel
+            title="Notifications"
+            icon={<Bell size={20} />}
+            body={`${recipient.recipient ? "Recipient configured" : "Recipient missing"} · last delivery ${latestDelivery?.status ?? "none"}`}
+            href="/admin/operations"
+          />
+          <MiniPanel
+            title="What's New"
+            icon={<Sparkles size={20} />}
+            body={`${releaseState.releases[0]?.version ?? "No release"} · ${releaseState.unread.length} unread`}
+            href="/admin/operations/releases"
+          />
+        </div>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
@@ -151,6 +225,28 @@ function StatusPanel({
 }) {
   return (
     <Link className="card block transition hover:-translate-y-0.5" href={href}>
+      <div className="flex items-center gap-3 text-moss dark:text-cyan">
+        {icon}
+        <p className="font-bold text-ink dark:text-paper">{title}</p>
+      </div>
+      <p className="mt-3 text-sm leading-6 text-ink/66 dark:text-paper/66">{body}</p>
+    </Link>
+  );
+}
+
+function MiniPanel({
+  body,
+  href,
+  icon,
+  title
+}: {
+  body: string;
+  href: string;
+  icon: React.ReactNode;
+  title: string;
+}) {
+  return (
+    <Link className="subtle-card block transition hover:-translate-y-0.5" href={href}>
       <div className="flex items-center gap-3 text-moss dark:text-cyan">
         {icon}
         <p className="font-bold text-ink dark:text-paper">{title}</p>

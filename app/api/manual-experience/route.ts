@@ -7,6 +7,7 @@ import {
 } from "@/lib/ai/analyze-study";
 import { apiError } from "@/lib/api";
 import { createNotification, createStudy } from "@/lib/data/store";
+import { runDuplicateCheckForStudy } from "@/lib/portfolio-operations/duplicates/find-duplicates";
 
 export const runtime = "nodejs";
 
@@ -45,18 +46,24 @@ export async function POST(request: NextRequest) {
         screenshotUrls: []
       })
     );
+    const duplicateCheck = await runDuplicateCheckForStudy(study);
 
     await createNotification({
-      title: "Manual experience analyzed",
-      message: `${study.safe_public_title} is ready for review.`,
-      type: "manual_ready",
+      title: duplicateCheck.duplicateFound
+        ? "Possible duplicate detected"
+        : "Manual experience analyzed",
+      message: duplicateCheck.duplicateFound
+        ? `${study.safe_public_title} needs duplicate review before normal approval.`
+        : `${study.safe_public_title} is ready for review.`,
+      type: duplicateCheck.duplicateFound ? "duplicate_alert" : "manual_ready",
       read: false,
       related_study_id: study.id
     });
 
     return NextResponse.json({
       studyId: study.id,
-      reviewUrl: `/admin/review/${study.id}`,
+      reviewUrl: duplicateCheck.duplicateReviewUrl ?? `/admin/review/${study.id}`,
+      duplicateCheck,
       analysis
     });
   } catch (error) {

@@ -25,6 +25,9 @@ SUPABASE_SERVICE_ROLE_KEY=
 NEXT_PUBLIC_SITE_URL=
 CRON_SECRET=
 ADMIN_ACCESS_TOKEN=
+RESEND_API_KEY=
+ADMIN_NOTIFICATION_EMAIL=pranavlikhi@gmail.com
+EMAIL_FROM=
 ```
 
 ## Variable Details
@@ -98,6 +101,27 @@ In production, the cron route returns `401` if `CRON_SECRET` is missing or incor
 
 In production, admin access fails safely if this variable is missing.
 
+### `RESEND_API_KEY`
+
+- Source: Resend.
+- Server-only secret.
+- Used for weekly maintenance emails, monthly design-review emails, critical alerts, and test emails.
+- Never prefix it with `NEXT_PUBLIC_`.
+- Never expose it in browser code, client logs, public pages, or email links.
+
+### `ADMIN_NOTIFICATION_EMAIL`
+
+- Fallback recipient for portfolio-operation notifications.
+- Default placeholder: `pranavlikhi@gmail.com`.
+- A saved protected admin preference overrides this environment fallback.
+- Do not expose this address on public pages or public APIs.
+
+### `EMAIL_FROM`
+
+- Source: Resend verified sender or verified domain.
+- Example shape: `Portfolio Operations <notifications@your-domain.com>`.
+- Required before Resend can send email.
+
 ## Build Settings
 
 Vercel should detect Next.js automatically.
@@ -112,6 +136,22 @@ Framework Preset: Next.js
 ```
 
 The repo also sets `buildCommand` in `vercel.json`.
+
+## Cron Setup
+
+`vercel.json` points Vercel Cron at:
+
+```text
+/api/cron/portfolio-operations
+```
+
+The route requires:
+
+```text
+Authorization: Bearer YOUR_CRON_SECRET
+```
+
+Do not put `CRON_SECRET` in query parameters, request bodies, cookies, client state, or email links. Vercel cron expressions operate in UTC; the app uses Notification Preferences to decide whether weekly or monthly work is due in the owner timezone.
 
 ## Production Test Links
 
@@ -152,13 +192,14 @@ https://YOUR_DOMAIN/admin-login
 
 Paste your `ADMIN_ACCESS_TOKEN` in the login form.
 
-Monthly cron manual test:
+Portfolio operations cron manual test:
 
 ```text
-https://YOUR_DOMAIN/api/cron/monthly-review?secret=YOUR_CRON_SECRET
+GET https://YOUR_DOMAIN/api/cron/portfolio-operations
+Authorization: Bearer YOUR_CRON_SECRET
 ```
 
-Expected result: JSON with a design review and maintenance report, or a clear error if another production dependency is missing.
+Expected result: safe JSON with dispatcher statuses and counts, or `401` when the Bearer token is missing or incorrect.
 
 Manual Living PDF regeneration after admin login:
 

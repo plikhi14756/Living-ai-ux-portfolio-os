@@ -200,6 +200,30 @@ curl -X POST http://localhost:3000/api/maintenance/run
 
 The maintenance check looks for duplicate entries, confidentiality flags, PDF status, SEO status, mobile readiness, and basic quality issues.
 
+## Portfolio Operations
+
+Use `/admin/operations` for the integrated operations dashboard:
+
+- Duplicate protection and duplicate audit history
+- Manual full health checks and maintenance issue history
+- Copyable Codex repair prompts
+- Notification preferences, delivery history, and test email support
+- What's New release summaries
+
+Duplicate review lives at `/admin/operations/duplicates`.
+Maintenance issue details live at `/admin/operations/maintenance`.
+Release history lives at `/admin/operations/releases`.
+
+Email notifications use server-only Resend configuration:
+
+```env
+RESEND_API_KEY=
+ADMIN_NOTIFICATION_EMAIL=pranavlikhi@gmail.com
+EMAIL_FROM=
+```
+
+Saved notification preferences override `ADMIN_NOTIFICATION_EMAIL`. Email links never include `ADMIN_ACCESS_TOKEN`.
+
 ## Vercel Deployment
 
 1. Push this repo to GitHub.
@@ -214,12 +238,15 @@ SUPABASE_SERVICE_ROLE_KEY=
 NEXT_PUBLIC_SITE_URL=
 CRON_SECRET=
 ADMIN_ACCESS_TOKEN=
+RESEND_API_KEY=
+ADMIN_NOTIFICATION_EMAIL=pranavlikhi@gmail.com
+EMAIL_FROM=
 ```
 
 `ADMIN_ACCESS_TOKEN` is the simple admin password/token for the private dashboard.
 
 4. Deploy.
-5. Ensure `CRON_SECRET` is set. The monthly route returns `401` in production without it.
+5. Ensure `CRON_SECRET` is set. The portfolio operations cron route returns `401` in production without a valid Bearer token.
 
 Detailed production guides:
 
@@ -231,10 +258,10 @@ Detailed production guides:
 `vercel.json` runs:
 
 ```text
-/api/cron/monthly-review
+/api/cron/portfolio-operations
 ```
 
-on the first day of every month at 14:00 UTC.
+hourly in UTC. The application-level dispatcher decides whether weekly maintenance, monthly design review, or critical alerts are due based on notification preferences and timezone.
 
 ## Useful Commands
 
@@ -247,7 +274,7 @@ npm run build
 ## Launch Checklist
 
 - Set all production environment variables in Vercel, including `ADMIN_ACCESS_TOKEN`.
-- Run Supabase migrations `0001_initial.sql`, `0002_scoring_consistency_fields.sql`, `0003_launch_privacy_hardening.sql`, `0004_pdf_and_recommendation_consistency.sql`, and `0005_branded_pdf_style_settings.sql`.
+- Run Supabase migrations `0001_initial.sql`, `0002_scoring_consistency_fields.sql`, `0003_launch_privacy_hardening.sql`, `0004_pdf_and_recommendation_consistency.sql`, `0005_branded_pdf_style_settings.sql`, and `0006_portfolio_operations_system.sql`.
 - Confirm Supabase `study-screenshots` is private and `portfolio-exports` is public.
 - Confirm `/admin` redirects to `/admin-login` for logged-out visitors.
 - Confirm `/api/storage/screenshot/...` and `/uploads/studies/...` require admin access.

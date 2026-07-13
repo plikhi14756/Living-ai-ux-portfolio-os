@@ -20,6 +20,7 @@ Run the migration files exactly in this order:
 3. `supabase/migrations/0003_launch_privacy_hardening.sql`
 4. `supabase/migrations/0004_pdf_and_recommendation_consistency.sql`
 5. `supabase/migrations/0005_branded_pdf_style_settings.sql`
+6. `supabase/migrations/0006_portfolio_operations_system.sql`
 
 ### Option A: Supabase SQL Editor
 
@@ -32,6 +33,7 @@ Run the migration files exactly in this order:
 7. Repeat for `0003_launch_privacy_hardening.sql`.
 8. Repeat for `0004_pdf_and_recommendation_consistency.sql`.
 9. Repeat for `0005_branded_pdf_style_settings.sql`.
+10. Repeat for `0006_portfolio_operations_system.sql`.
 
 ### Option B: Supabase CLI
 
@@ -51,6 +53,14 @@ After the migrations run, confirm these tables exist:
 - `maintenance_reports`
 - `notifications`
 - `site_settings`
+- `duplicate_audit_log`
+- `maintenance_runs`
+- `maintenance_issues`
+- `notification_preferences`
+- `notification_deliveries`
+- `releases`
+- `release_views`
+- `operations_audit_log`
 
 Confirm this public-safe view exists:
 
@@ -62,6 +72,8 @@ The view must filter to:
 status = 'approved'
 and portfolio_score >= 30
 and portfolio_classification not in ('Record only', 'Do not add')
+and duplicate_status <> 'superseded'
+and superseded_at is null
 ```
 
 This is the production public-data boundary. Public pages read this view, not private screenshot evidence.
@@ -96,6 +108,14 @@ The migrations enable Row Level Security on:
 - `maintenance_reports`
 - `notifications`
 - `site_settings`
+- `duplicate_audit_log`
+- `maintenance_runs`
+- `maintenance_issues`
+- `notification_preferences`
+- `notification_deliveries`
+- `releases`
+- `release_views`
+- `operations_audit_log`
 
 The migrations revoke direct `anon` and `authenticated` access to private tables. The app uses the server-only `SUPABASE_SERVICE_ROLE_KEY` for admin operations.
 
@@ -108,6 +128,15 @@ Public visitors can only select from `approved_portfolio_entries`. That view int
 - studies with `portfolio_score < 30`
 - screenshot URLs
 - private notes and raw evidence
+- superseded duplicate records
+
+Operations privacy:
+
+- Duplicate audit logs are private admin data.
+- Maintenance technical details are private admin data.
+- Notification preferences and delivery records are private admin data.
+- Release views are private admin state.
+- Operations audit metadata must not contain secrets.
 
 Storage privacy:
 

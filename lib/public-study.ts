@@ -42,12 +42,15 @@ export function toPublicStudy(study: Study): PublicStudy {
 }
 
 export function isPublicPortfolioStudy(
-  study: Pick<Study, "portfolio_classification" | "portfolio_score">
+  study: Pick<Study, "portfolio_classification" | "portfolio_score"> &
+    Partial<Pick<Study, "duplicate_status" | "superseded_at">>
 ) {
   return (
     study.portfolio_score >= 30 &&
     study.portfolio_classification !== "Record only" &&
-    study.portfolio_classification !== "Do not add"
+    study.portfolio_classification !== "Do not add" &&
+    study.duplicate_status !== "superseded" &&
+    !study.superseded_at
   );
 }
 

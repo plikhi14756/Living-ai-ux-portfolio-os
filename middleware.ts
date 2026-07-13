@@ -11,6 +11,7 @@ const protectedApiPrefixes = [
   "/api/design-review",
   "/api/import-original-portfolio",
   "/api/maintenance",
+  "/api/operations",
   "/api/export-pdf",
   "/api/settings",
   "/api/notifications",

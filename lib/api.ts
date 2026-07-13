@@ -15,3 +15,10 @@ export function requireCronSecret(request: Request) {
   const url = new URL(request.url);
   return auth === `Bearer ${secret}` || url.searchParams.get("secret") === secret;
 }
+
+export function requireCronBearerSecret(request: Request) {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return !isProductionDeployment();
+
+  return request.headers.get("authorization") === `Bearer ${secret}`;
+}

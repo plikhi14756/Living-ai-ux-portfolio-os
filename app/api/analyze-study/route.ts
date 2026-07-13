@@ -9,6 +9,7 @@ import {
 import { apiError } from "@/lib/api";
 import { createNotification, createStudy } from "@/lib/data/store";
 import { saveStudyScreenshots } from "@/lib/data/storage";
+import { runDuplicateCheckForStudy } from "@/lib/portfolio-operations/duplicates/find-duplicates";
 
 export const runtime = "nodejs";
 
@@ -105,6 +106,7 @@ export async function POST(request: NextRequest) {
           screenshotUrls
         })
       );
+      const duplicateCheck = await runDuplicateCheckForStudy(study);
 
       await createNotification({
         title: "Screenshot saved, AI analysis paused",
@@ -116,7 +118,8 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         studyId: study.id,
-        reviewUrl: `/admin/review/${study.id}`,
+        reviewUrl: duplicateCheck.duplicateReviewUrl ?? `/admin/review/${study.id}`,
+        duplicateCheck,
         warning: OPENAI_QUOTA_MESSAGE
       });
     }
@@ -127,18 +130,22 @@ export async function POST(request: NextRequest) {
         screenshotUrls
       })
     );
+    const duplicateCheck = await runDuplicateCheckForStudy(study);
 
     await createNotification({
-      title: "Study ready for review",
-      message: `${study.safe_public_title} was analyzed and saved as a pending portfolio record.`,
-      type: "study_ready",
+      title: duplicateCheck.duplicateFound ? "Possible duplicate detected" : "Study ready for review",
+      message: duplicateCheck.duplicateFound
+        ? `${study.safe_public_title} needs duplicate review before normal approval.`
+        : `${study.safe_public_title} was analyzed and saved as a pending portfolio record.`,
+      type: duplicateCheck.duplicateFound ? "duplicate_alert" : "study_ready",
       read: false,
       related_study_id: study.id
     });
 
     return NextResponse.json({
       studyId: study.id,
-      reviewUrl: `/admin/review/${study.id}`,
+      reviewUrl: duplicateCheck.duplicateReviewUrl ?? `/admin/review/${study.id}`,
+      duplicateCheck,
       analysis
     });
   } catch (error) {
