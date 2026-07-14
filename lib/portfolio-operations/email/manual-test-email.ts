@@ -23,7 +23,7 @@ function isManualTestDelivery(metadata: unknown) {
 }
 
 export async function sendManualTestEmail(now = new Date()) {
-  const { recipient, source } = await resolveNotificationRecipient();
+  const { preferences, recipient, source } = await resolveNotificationRecipient();
   const deliveries = await listNotificationDeliveries();
   const latestManualAttempt = deliveries.find(
     (delivery) =>
@@ -43,7 +43,7 @@ export async function sendManualTestEmail(now = new Date()) {
     };
   }
 
-  const template = testEmailTemplate(now);
+  const template = testEmailTemplate(now, preferences.timezone);
   const idempotencyKey = `manual-test/${recipientHash(recipient)}/${randomUUID()}`;
   const delivery = await sendOperationalEmail({
     ...template,

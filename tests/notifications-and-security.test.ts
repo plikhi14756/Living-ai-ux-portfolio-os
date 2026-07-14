@@ -8,6 +8,7 @@ import {
 import { sendOperationalEmail } from "@/lib/portfolio-operations/email/send-email";
 import {
   criticalAlertEmail,
+  testEmailTemplate,
   weeklyMaintenanceEmail
 } from "@/lib/portfolio-operations/email/templates";
 import { resolveNotificationRecipient } from "@/lib/portfolio-operations/email/resolve-recipient";
@@ -140,6 +141,33 @@ describe("notification recipient resolution", () => {
       expect(storeMock.createNotificationDelivery).not.toHaveBeenCalled();
     }
   );
+
+  it("formats manual test email subjects in America/Halifax local time with timezone abbreviation", () => {
+    const subject = testEmailTemplate(
+      new Date("2026-07-14T02:05:00.000Z"),
+      "America/Halifax"
+    ).subject;
+
+    expect(subject).toBe("Portfolio Operations test - Jul 13, 2026, 11:05 PM ADT");
+  });
+
+  it("formats manual test email subjects in Asia/Kolkata local time with explicit timezone", () => {
+    const subject = testEmailTemplate(
+      new Date("2026-07-14T02:05:00.000Z"),
+      "Asia/Kolkata"
+    ).subject;
+
+    expect(subject).toBe("Portfolio Operations test - Jul 14, 2026, 7:35 AM GMT+5:30");
+  });
+
+  it("falls back to America/Halifax when a saved notification timezone is invalid", () => {
+    const subject = testEmailTemplate(
+      new Date("2026-07-14T02:05:00.000Z"),
+      "Not/AZone"
+    ).subject;
+
+    expect(subject).toBe("Portfolio Operations test - Jul 13, 2026, 11:05 PM ADT");
+  });
 
   it("sends two manual test emails after cooldown with unique idempotency keys and provider IDs", async () => {
     vi.useFakeTimers();
@@ -318,6 +346,37 @@ describe("notification recipient resolution", () => {
     expect(result.message).toBe("Resend did not return a provider message ID");
     expect(result.delivery?.status).toBe("failed");
     expect(result.delivery?.provider_message_id).toBeNull();
+  });
+
+  it("uses the saved notification timezone for manual test email delivery subjects", async () => {
+    vi.useFakeTimers();
+    vi.stubEnv("ADMIN_NOTIFICATION_EMAIL", "pranavlikhi@gmail.com");
+    vi.stubEnv("RESEND_API_KEY", "resend-key");
+    vi.stubEnv("EMAIL_FROM", "Portfolio <ops@example.com>");
+    storeMock.getNotificationPreferences.mockResolvedValue(
+      notificationPreferences({ notification_email: null, timezone: "Asia/Kolkata" })
+    );
+    storeMock.listNotificationDeliveries.mockResolvedValue([]);
+    storeMock.createNotificationDelivery.mockImplementation((input) =>
+      Promise.resolve({
+        id: "delivery-kolkata",
+        created_at: new Date().toISOString(),
+        ...input
+      } as NotificationDelivery)
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ id: "resend-kolkata" }), { status: 200 })
+      )
+    );
+
+    vi.setSystemTime(new Date("2026-07-14T02:05:00.000Z"));
+    const result = await sendManualTestEmail(new Date());
+
+    expect(result.delivery?.subject).toBe(
+      "Portfolio Operations test - Jul 14, 2026, 7:35 AM GMT+5:30"
+    );
   });
 
   it("email links never include admin or cron secrets", () => {

@@ -54,18 +54,33 @@ export function criticalAlertEmail(issue: MaintenanceIssue) {
   return { subject, text, html };
 }
 
-function formatEmailTimestamp(date: Date) {
+const FALLBACK_EMAIL_TIME_ZONE = "America/Halifax";
+
+function resolveEmailTimeZone(timeZone: string | null | undefined) {
+  const candidate = timeZone?.trim() || FALLBACK_EMAIL_TIME_ZONE;
+
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: candidate }).format(new Date(0));
+    return candidate;
+  } catch {
+    return FALLBACK_EMAIL_TIME_ZONE;
+  }
+}
+
+function formatEmailTimestamp(date: Date, timeZone: string | null | undefined) {
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
     hour: "numeric",
-    minute: "2-digit"
+    minute: "2-digit",
+    timeZone: resolveEmailTimeZone(timeZone),
+    timeZoneName: "short"
   }).format(date);
 }
 
-export function testEmailTemplate(sentAt = new Date()) {
-  const subject = `Portfolio Operations test - ${formatEmailTimestamp(sentAt)}`;
+export function testEmailTemplate(sentAt = new Date(), timeZone?: string | null) {
+  const subject = `Portfolio Operations test - ${formatEmailTimestamp(sentAt, timeZone)}`;
 
   const operationsUrl = `${baseUrl()}/admin/operations`;
 
