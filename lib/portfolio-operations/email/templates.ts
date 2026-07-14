@@ -55,11 +55,53 @@ export function criticalAlertEmail(issue: MaintenanceIssue) {
 }
 
 export function testEmailTemplate() {
-  const subject = "Living AI UX Portfolio OS test email";
-  const text = `This is a privacy-safe test notification. Open settings: ${baseUrl()}/admin/operations`;
+  const subject = "Portfolio Operations notifications are connected";
+
+  const operationsUrl = `${baseUrl()}/admin/operations`;
+
+  const text = [
+    "Your Living AI UX Portfolio OS email notifications are working correctly.",
+    "",
+    "This test confirms that:",
+    "- Resend is connected",
+    "- Your notification recipient is configured",
+    "- Portfolio Operations can send maintenance and system alerts",
+    "",
+    `Open Portfolio Operations: ${operationsUrl}`,
+    "",
+    "This message contains only privacy-safe operational information."
+  ].join("\n");
+
   const html = shell(
     subject,
-    `<p>This is a privacy-safe test notification.</p><p><a href="${baseUrl()}/admin/operations">Open Portfolio Operations</a></p>`
+    `
+      <div style="background:#ffffff;border:1px solid #dfe5e2;border-radius:16px;padding:24px;margin-bottom:20px">
+        <p style="font-size:16px;line-height:1.6;margin-top:0">
+          Your <strong>Living AI UX Portfolio OS</strong> email notifications
+          are working correctly.
+        </p>
+
+        <p style="font-size:15px;line-height:1.6">
+          This test confirms that:
+        </p>
+
+        <ul style="font-size:15px;line-height:1.8;padding-left:22px">
+          <li>Resend is connected</li>
+          <li>Your notification recipient is configured</li>
+          <li>Portfolio Operations can send maintenance and system alerts</li>
+        </ul>
+
+        <p style="margin-top:24px">
+          <a
+            href="${operationsUrl}"
+            style="display:inline-block;background:#17211f;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:9px;font-weight:600"
+          >
+            Open Portfolio Operations
+          </a>
+        </p>
+      </div>
+    `
   );
+
   return { subject, text, html };
 }
