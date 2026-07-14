@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { requireCronBearerSecret } from "@/lib/api";
+import type { NotificationDelivery } from "@/lib/types";
+import {
+  MANUAL_TEST_EMAIL_COOLDOWN_MS,
+  sendManualTestEmail
+} from "@/lib/portfolio-operations/email/manual-test-email";
 import { sendOperationalEmail } from "@/lib/portfolio-operations/email/send-email";
 import {
   criticalAlertEmail,
@@ -22,10 +27,14 @@ describe("notification recipient resolution", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   afterEach(() => {
     vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   it("uses saved notification preference before environment fallback", async () => {
@@ -106,6 +115,209 @@ describe("notification recipient resolution", () => {
 
     expect(delivery.id).toBe("existing");
     expect(storeMock.createNotificationDelivery).not.toHaveBeenCalled();
+  });
+
+  it.each(["weekly:2026-07-14", "monthly-design:2026-07-01", "critical:privacy:study:study-1"])(
+    "keeps scheduled idempotency deterministic for %s",
+    async (idempotencyKey) => {
+      storeMock.listNotificationDeliveries.mockResolvedValue([
+        {
+          id: `existing-${idempotencyKey}`,
+          status: "sent",
+          idempotency_key: idempotencyKey
+        }
+      ]);
+
+      const delivery = await sendOperationalEmail({
+        html: "<p>Scheduled</p>",
+        text: "Scheduled",
+        subject: "Scheduled",
+        notificationType: "scheduled",
+        idempotencyKey
+      });
+
+      expect(delivery.id).toBe(`existing-${idempotencyKey}`);
+      expect(storeMock.createNotificationDelivery).not.toHaveBeenCalled();
+    }
+  );
+
+  it("sends two manual test emails after cooldown with unique idempotency keys and provider IDs", async () => {
+    vi.useFakeTimers();
+    vi.stubEnv("ADMIN_NOTIFICATION_EMAIL", "pranavlikhi@gmail.com");
+    vi.stubEnv("RESEND_API_KEY", "resend-key");
+    vi.stubEnv("EMAIL_FROM", "Portfolio <ops@example.com>");
+    storeMock.getNotificationPreferences.mockResolvedValue(
+      notificationPreferences({ notification_email: null })
+    );
+
+    const deliveries: NotificationDelivery[] = [];
+    storeMock.listNotificationDeliveries.mockImplementation(() => Promise.resolve([...deliveries]));
+    storeMock.createNotificationDelivery.mockImplementation((input) => {
+      const delivery = {
+        id: `delivery-${deliveries.length + 1}`,
+        created_at: new Date().toISOString(),
+        ...input
+      } as NotificationDelivery;
+      deliveries.unshift(delivery);
+      return Promise.resolve(delivery);
+    });
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: "resend-message-1" }), { status: 200 })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: "resend-message-2" }), { status: 200 })
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    vi.setSystemTime(new Date("2026-07-14T04:45:00.000Z"));
+    const first = await sendManualTestEmail(new Date());
+    vi.setSystemTime(new Date("2026-07-14T04:46:01.000Z"));
+    const second = await sendManualTestEmail(new Date());
+
+    expect(first.message).toBe("Test email sent.");
+    expect(second.message).toBe("Test email sent.");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(first.delivery?.provider_message_id).toBe("resend-message-1");
+    expect(second.delivery?.provider_message_id).toBe("resend-message-2");
+    expect(first.delivery?.idempotency_key).toMatch(/^manual-test\/[a-f0-9]{16}\//);
+    expect(second.delivery?.idempotency_key).toMatch(/^manual-test\/[a-f0-9]{16}\//);
+    expect(first.delivery?.idempotency_key).not.toBe(second.delivery?.idempotency_key);
+    expect(first.delivery?.idempotency_key).not.toContain("pranavlikhi@gmail.com");
+    expect(second.delivery?.idempotency_key).not.toContain("resend-key");
+    expect(first.delivery?.subject).toContain("Portfolio Operations test - Jul 14, 2026");
+    expect(second.delivery?.subject).toContain("Portfolio Operations test - Jul 14, 2026");
+  });
+
+  it("rate-limits rapid manual test email clicks without reporting a new send", async () => {
+    vi.useFakeTimers();
+    vi.stubEnv("ADMIN_NOTIFICATION_EMAIL", "pranavlikhi@gmail.com");
+    vi.stubEnv("RESEND_API_KEY", "resend-key");
+    vi.stubEnv("EMAIL_FROM", "Portfolio <ops@example.com>");
+    storeMock.getNotificationPreferences.mockResolvedValue(
+      notificationPreferences({ notification_email: null })
+    );
+
+    const deliveries: NotificationDelivery[] = [];
+    storeMock.listNotificationDeliveries.mockImplementation(() => Promise.resolve([...deliveries]));
+    storeMock.createNotificationDelivery.mockImplementation((input) => {
+      const delivery = {
+        id: `delivery-${deliveries.length + 1}`,
+        created_at: new Date().toISOString(),
+        ...input
+      } as NotificationDelivery;
+      deliveries.unshift(delivery);
+      return Promise.resolve(delivery);
+    });
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ id: "resend-message-1" }), { status: 200 })
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    vi.setSystemTime(new Date("2026-07-14T04:45:00.000Z"));
+    const first = await sendManualTestEmail(new Date());
+    vi.setSystemTime(
+      new Date("2026-07-14T04:45:00.000Z").getTime() + MANUAL_TEST_EMAIL_COOLDOWN_MS - 1
+    );
+    const second = await sendManualTestEmail(new Date());
+
+    expect(first.message).toBe("Test email sent.");
+    expect(second).toMatchObject({
+      delivery: null,
+      rateLimited: true,
+      message: "Please wait before sending another test email."
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(deliveries).toHaveLength(1);
+  });
+
+  it("does not reuse a previous successful manual test delivery as a new success", async () => {
+    vi.useFakeTimers();
+    vi.stubEnv("ADMIN_NOTIFICATION_EMAIL", "pranavlikhi@gmail.com");
+    vi.stubEnv("RESEND_API_KEY", "resend-key");
+    vi.stubEnv("EMAIL_FROM", "Portfolio <ops@example.com>");
+    storeMock.getNotificationPreferences.mockResolvedValue(
+      notificationPreferences({ notification_email: null })
+    );
+
+    const deliveries: NotificationDelivery[] = [
+      {
+        id: "old-delivery",
+        notification_type: "test_email",
+        maintenance_run_id: null,
+        maintenance_issue_id: null,
+        recipient: "pranavlikhi@gmail.com",
+        provider: "resend",
+        provider_message_id: "old-message",
+        status: "sent",
+        subject: "Portfolio Operations test - old",
+        failure_reason: null,
+        idempotency_key: "manual-test/old/old",
+        attempted_at: "2026-07-14T04:40:00.000Z",
+        sent_at: "2026-07-14T04:40:00.000Z",
+        metadata: { manualTest: true },
+        created_at: "2026-07-14T04:40:00.000Z"
+      }
+    ];
+    storeMock.listNotificationDeliveries.mockImplementation(() => Promise.resolve([...deliveries]));
+    storeMock.createNotificationDelivery.mockImplementation((input) => {
+      const delivery = {
+        id: `delivery-${deliveries.length + 1}`,
+        created_at: new Date().toISOString(),
+        ...input
+      } as NotificationDelivery;
+      deliveries.unshift(delivery);
+      return Promise.resolve(delivery);
+    });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ id: "new-message" }), { status: 200 })
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    vi.setSystemTime(new Date("2026-07-14T04:42:00.000Z"));
+    const result = await sendManualTestEmail(new Date());
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result.message).toBe("Test email sent.");
+    expect(result.delivery?.id).not.toBe("old-delivery");
+    expect(result.delivery?.provider_message_id).toBe("new-message");
+    expect(result.delivery?.idempotency_key).not.toBe("manual-test/old/old");
+  });
+
+  it("does not report manual test success when Resend returns no fresh provider ID", async () => {
+    vi.useFakeTimers();
+    vi.stubEnv("ADMIN_NOTIFICATION_EMAIL", "pranavlikhi@gmail.com");
+    vi.stubEnv("RESEND_API_KEY", "resend-key");
+    vi.stubEnv("EMAIL_FROM", "Portfolio <ops@example.com>");
+    storeMock.getNotificationPreferences.mockResolvedValue(
+      notificationPreferences({ notification_email: null })
+    );
+    storeMock.listNotificationDeliveries.mockResolvedValue([]);
+    storeMock.createNotificationDelivery.mockImplementation((input) =>
+      Promise.resolve({
+        id: "delivery-without-provider-id",
+        created_at: new Date().toISOString(),
+        ...input
+      } as NotificationDelivery)
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }))
+    );
+
+    vi.setSystemTime(new Date("2026-07-14T04:45:00.000Z"));
+    const result = await sendManualTestEmail(new Date());
+
+    expect(result.message).toBe("Resend did not return a provider message ID");
+    expect(result.delivery?.status).toBe("failed");
+    expect(result.delivery?.provider_message_id).toBeNull();
   });
 
   it("email links never include admin or cron secrets", () => {

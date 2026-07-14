@@ -9,6 +9,7 @@ export async function sendOperationalEmail({
   idempotencyKey,
   maintenanceIssueId,
   maintenanceRunId,
+  metadata,
   notificationType,
   subject,
   text
@@ -17,6 +18,7 @@ export async function sendOperationalEmail({
   idempotencyKey: string;
   maintenanceIssueId?: string | null;
   maintenanceRunId?: string | null;
+  metadata?: Record<string, unknown>;
   notificationType: string;
   subject: string;
   text: string;
@@ -47,7 +49,7 @@ export async function sendOperationalEmail({
       idempotency_key: idempotencyKey,
       attempted_at: attemptedAt,
       sent_at: null,
-      metadata: { recipientSource: source }
+      metadata: { ...metadata, recipientSource: source }
     });
   }
 
@@ -65,7 +67,7 @@ export async function sendOperationalEmail({
       idempotency_key: idempotencyKey,
       attempted_at: attemptedAt,
       sent_at: null,
-      metadata: { recipientSource: source }
+      metadata: { ...metadata, recipientSource: source }
     });
   }
 
@@ -100,7 +102,25 @@ export async function sendOperationalEmail({
         idempotency_key: idempotencyKey,
         attempted_at: attemptedAt,
         sent_at: null,
-        metadata: { recipientSource: source, status: response.status }
+        metadata: { ...metadata, recipientSource: source, status: response.status }
+      });
+    }
+
+    if (!payload.id) {
+      return createNotificationDelivery({
+        notification_type: notificationType,
+        maintenance_run_id: maintenanceRunId ?? null,
+        maintenance_issue_id: maintenanceIssueId ?? null,
+        recipient,
+        provider: "resend",
+        provider_message_id: null,
+        status: "failed",
+        subject,
+        failure_reason: "Resend did not return a provider message ID",
+        idempotency_key: idempotencyKey,
+        attempted_at: attemptedAt,
+        sent_at: null,
+        metadata: { ...metadata, recipientSource: source }
       });
     }
 
@@ -117,7 +137,7 @@ export async function sendOperationalEmail({
       idempotency_key: idempotencyKey,
       attempted_at: attemptedAt,
       sent_at: new Date().toISOString(),
-      metadata: { recipientSource: source }
+      metadata: { ...metadata, recipientSource: source }
     });
   } catch {
     return createNotificationDelivery({
@@ -133,7 +153,7 @@ export async function sendOperationalEmail({
       idempotency_key: idempotencyKey,
       attempted_at: attemptedAt,
       sent_at: null,
-      metadata: { recipientSource: source }
+      metadata: { ...metadata, recipientSource: source }
     });
   }
 }

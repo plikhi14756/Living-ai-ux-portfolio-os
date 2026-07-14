@@ -54,8 +54,18 @@ export function criticalAlertEmail(issue: MaintenanceIssue) {
   return { subject, text, html };
 }
 
-export function testEmailTemplate() {
-  const subject = "Portfolio Operations notifications are connected";
+function formatEmailTimestamp(date: Date) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  }).format(date);
+}
+
+export function testEmailTemplate(sentAt = new Date()) {
+  const subject = `Portfolio Operations test - ${formatEmailTimestamp(sentAt)}`;
 
   const operationsUrl = `${baseUrl()}/admin/operations`;
 
